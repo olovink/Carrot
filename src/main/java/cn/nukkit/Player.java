@@ -63,6 +63,7 @@ import co.aikar.timings.Timing;
 import co.aikar.timings.Timings;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
+import lombok.var;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -94,6 +95,7 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
 
     public static final float DEFAULT_SPEED = 0.1f;
     public static final float MAXIMUM_SPEED = 0.5f;
+    public static final Player[] EMPTY_ARRAY = new Player[0];
 
     protected final SourceInterface interfaz;
 
@@ -1499,7 +1501,8 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
             this.lastYaw = from.yaw;
             this.lastPitch = from.pitch;
 
-            this.sendPosition(from, from.yaw, from.pitch, MovePlayerPacket.MODE_RESET);
+            //this.sendPosition(from, from.yaw, from.pitch, MovePlayerPacket.MODE_RESET);
+            this.broadcastMovement(true);
             //this.sendSettings();
             this.forceMovement = new Vector3(from.x, from.y, from.z);
         } else {
@@ -1716,6 +1719,26 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
             }
         }
         return null;
+    }
+
+    protected void broadcastMovement(Boolean teleport) {
+        if (teleport) {
+            for (var player : hasSpawned.values()) {
+                despawnFrom(player);
+                spawnTo(player);
+            }
+        } else {
+            var pk = new MoveEntityPacket();
+            pk.eid = this.getId();
+            pk.x = this.x;
+            pk.y = isSwimming() ? this.y + getBaseOffset() : this.y + this.getEyeHeight();
+            pk.z = this.z;
+            pk.headYaw = yaw;
+            pk.pitch = pitch;
+            pk.yaw = yaw;
+            pk.onGround = this.onGround;
+            Server.broadcastPacket(hasSpawned.values(), pk);
+        }
     }
     
     private final ArrayList<String> messageQueue = new ArrayList<>();

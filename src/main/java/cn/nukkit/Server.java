@@ -71,6 +71,7 @@ import cn.nukkit.potion.Potion;
 import cn.nukkit.resourcepacks.ResourcePackManager;
 import cn.nukkit.scheduler.FileWriteTask;
 import cn.nukkit.scheduler.ServerScheduler;
+import cn.nukkit.scheduler.Task;
 import cn.nukkit.utils.*;
 import cn.nukkit.utils.bugreport.ExceptionHandler;
 import co.aikar.timings.Timings;
@@ -80,6 +81,7 @@ import lombok.extern.log4j.Log4j2;
 import java.io.*;
 import java.nio.ByteOrder;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author MagicDroidX
@@ -101,7 +103,7 @@ public class Server {
 
     private Config whitelist = null;
 
-    private boolean isRunning = true;
+    private AtomicBoolean isRunning = new AtomicBoolean(true);
 
     private boolean hasStopped = false;
 
@@ -566,7 +568,7 @@ public class Server {
 
 
     public static void broadcastPacket(Collection<Player> players, DataPacket packet) {
-        broadcastPacket(players.stream().toArray(Player[]::new), packet);
+        broadcastPacket(players.toArray(new Player[0]), packet);
     }
 
     public static void broadcastPacket(Player[] players, DataPacket packet) {
@@ -676,7 +678,6 @@ public class Server {
         return false;
     }
 
-    //todo: use ticker to check console
     public ConsoleCommandSender getConsoleSender() {
         return consoleSender;
     }
@@ -719,11 +720,11 @@ public class Server {
     }
 
     public void shutdown() {
-        if (this.isRunning) {
+        if (this.isRunning.get()) {
             ServerKiller killer = new ServerKiller(90);
             killer.start();
         }
-        this.isRunning = false;
+        isRunning.compareAndSet(true, false);
     }
 
     public void forceShutdown() {
@@ -732,9 +733,7 @@ public class Server {
         }
 
         try {
-            if (!this.isRunning) {
-                //todo sendUsage
-            }
+            isRunning.compareAndSet(true, false);
 
             this.hasStopped = true;
 
@@ -815,9 +814,17 @@ public class Server {
     }
 
     public void tickProcessor() {
+        getScheduler().scheduleDelayedTask(new Task() {
+            @Override
+            public void onRun(int currentTick) {
+                System.runFinalization();
+                System.gc();
+            }
+        }, 60);
+
         this.nextTick = System.currentTimeMillis();
         try {
-            while (this.isRunning) {
+            while (this.isRunning.get()) {
                 try {
                     this.tick();
 
@@ -825,15 +832,18 @@ public class Server {
                     long current = System.currentTimeMillis();
 
                     if (next - 0.1 > current) {
-                        Thread.sleep(next - current - 1, 900000);
+                        long allocated = next - current - 1;
+
+                        if (allocated > 0) {
+                            Thread.sleep(allocated, 900000);
+                        }
                     }
                 } catch (RuntimeException e) {
-                    this.getLogger().logException(e);
+                    log.error("A RuntimeException happened while ticking the server", e);
                 }
             }
         } catch (Throwable e) {
-            log.fatal("Exception happened while ticking server", e);
-            log.fatal(Utils.getAllThreadDumps());
+            log.fatal("Exception happened while ticking server\n{}", Utils.getAllThreadDumps(), e);
         }
     }
 
@@ -895,7 +905,7 @@ public class Server {
     }
 
     public void removePlayerListData(UUID uuid, Collection<Player> players) {
-        this.removePlayerListData(uuid, players.stream().toArray(Player[]::new));
+        this.removePlayerListData(uuid, players.toArray(new Player[0]));
     }
 
     public void sendFullPlayerListData(Player player) {
@@ -1086,9 +1096,8 @@ public class Server {
         return true;
     }
 
-    // TODO: Fix title tick
     public void titleTick() {
-        if (true || !Nukkit.ANSI) {
+        if (!Nukkit.ANSI || !Nukkit.TITLE) {
             return;
         }
 
@@ -1096,20 +1105,18 @@ public class Server {
         double used = NukkitMath.round((double) (runtime.totalMemory() - runtime.freeMemory()) / 1024 / 1024, 2);
         double max = NukkitMath.round(((double) runtime.maxMemory()) / 1024 / 1024, 2);
         String usage = Math.round(used / max * 100) + "%";
-        String title = (char) 0x1b + "]0;" + this.getName() + " " +
-                this.getNukkitVersion() +
-                " | Online " + this.players.size() + "/" + this.getMaxPlayers() +
-                " | Memory " + usage;
+        String title = (char) 0x1b + "]0;" + this.getName() + " "
+                + this.getNukkitVersion()
+                + " | Online " + this.players.size() + "/" + this.getMaxPlayers()
+                + " | Memory " + usage;
         if (!Nukkit.shortTitle) {
             title += " | U " + NukkitMath.round((this.network.getUpload() / 1024 * 1000), 2)
                     + " D " + NukkitMath.round((this.network.getDownload() / 1024 * 1000), 2) + " kB/s";
         }
-        title += " | TPS " + this.getTicksPerSecond() +
-                " | Load " + this.getTickUsage() + "%" + (char) 0x07;
+        title += " | TPS " + this.getTicksPerSecond()
+                + " | Load " + this.getTickUsage() + "%" + (char) 0x07;
 
         System.out.print(title);
-
-        this.network.resetStatistics();
     }
 
     public QueryRegenerateEvent getQueryInformation() {
@@ -1117,11 +1124,15 @@ public class Server {
     }
 
     public String getName() {
-        return "Carrot";
+        return Nukkit.NAME;
+    }
+
+    public String getCarrotVersion() {
+        return Nukkit.CARROT_VERSION;
     }
 
     public boolean isRunning() {
-        return isRunning;
+        return isRunning.get();
     }
 
     public String getNukkitVersion() {

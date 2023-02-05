@@ -51,6 +51,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class Entity extends Location implements Metadatable {
 
     public static final int NETWORK_ID = -1;
+    private static final int DATA_FLAG_SWIMMING = 56;
 
     public abstract int getNetworkId();
 
@@ -834,6 +835,63 @@ public abstract class Entity extends Location implements Metadatable {
         if (this instanceof Player) {
             ((Player) this).dataPacket(pk);
         }
+    }
+
+    public boolean isSwimming() {
+        return this.getDataFlag(DATA_FLAGS, DATA_FLAG_SWIMMING);
+    }
+
+    public void setSwimming(boolean value) {
+        if (isSwimming() == value) {
+            return;
+        }
+        this.setDataFlag(DATA_FLAGS, DATA_FLAG_SWIMMING, value);
+        if (Float.compare(getSwimmingHeight(), getHeight()) != 0) {
+            recalculateBoundingBox(true);
+        }
+    }
+
+    public void recalculateBoundingBox() {
+        this.recalculateBoundingBox(true);
+    }
+
+    public float getCurrentHeight() {
+        if (isSwimming()) {
+            return getSwimmingHeight();
+        } else {
+            return getHeight();
+        }
+    }
+
+    public void recalculateBoundingBox(boolean send) {
+        float entityHeight = getCurrentHeight();
+        float height = entityHeight * this.scale;
+        double radius = (this.getWidth() * this.scale) / 2d;
+        this.boundingBox.setBounds(
+                x - radius,
+                y,
+                z - radius,
+
+                x + radius,
+                y + height,
+                z + radius
+        );
+
+        FloatEntityData bbH = new FloatEntityData(DATA_BOUNDING_BOX_HEIGHT, entityHeight);
+        FloatEntityData bbW = new FloatEntityData(DATA_BOUNDING_BOX_WIDTH, this.getWidth());
+        this.dataProperties.put(bbH);
+        this.dataProperties.put(bbW);
+        if (send) {
+            sendData(this.hasSpawned.values().toArray(Player.EMPTY_ARRAY), new EntityMetadata().put(bbH).put(bbW));
+        }
+    }
+
+    public float getSwimmingHeight() {
+        return getHeight();
+    }
+
+    public void setSwimming() {
+        this.setSwimming(true);
     }
 
     public void despawnFrom(Player player) {

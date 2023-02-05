@@ -18,26 +18,15 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 
 import java.io.IOException;
 
-/**
- * `_   _       _    _    _ _
- * | \ | |     | |  | |  (_) |
- * |  \| |_   _| | _| | ___| |_
- * | . ` | | | | |/ / |/ / | __|
- * | |\  | |_| |   <|   <| | |_
- * |_| \_|\__,_|_|\_\_|\_\_|\__|
- *
- * Nukkit启动类，包含{@code main}函数。<br>
- * The launcher class of Nukkit, including the {@code main} function.
- *
- * @author MagicDroidX(code) @ Nukkit Project
- * @author 粉鞋大妈(javadoc) @ Nukkit Project
- * @since Nukkit 1.0 | Nukkit API 1.0.0
- */
 @Log4j2
 public class Nukkit {
     public final static String VERSION = "1.0.1";
     public final static String API_VERSION = "1.0.0";
-    public final static String CODENAME = "";
+
+    public final static String CARROT_VERSION = "1.0.1";
+    public final static String CODENAME = "https://vk.com/tunekovv";
+
+    public final static String NAME = "Nukkit";
     @Deprecated
     public final static String[] MINECRAFT_VERSION = ProtocolInfo.MINECRAFT_VERSION;
     @Deprecated
@@ -53,15 +42,13 @@ public class Nukkit {
     public static int DEBUG = 1;
 
     public static void main(String[] args) {
-        // Force IPv4 since Carrot is not compatible with IPv6
+
         System.setProperty("java.net.preferIPv4Stack" , "true");
         System.setProperty("log4j.skipJansi", "false");
-        System.getProperties().putIfAbsent("io.netty.allocator.type", "unpooled"); // Disable memory pooling unless specified
+        System.getProperties().putIfAbsent("io.netty.allocator.type", "unpooled");
 
-        // Force Mapped ByteBuffers for LevelDB till fixed.
         System.setProperty("leveldb.mmap", "true");
 
-        // Netty logger for debug info
         InternalLoggerFactory.setDefaultFactory(Log4J2LoggerFactory.INSTANCE);
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
 

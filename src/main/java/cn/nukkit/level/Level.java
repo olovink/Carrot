@@ -287,7 +287,7 @@ public class Level implements ChunkManager, Metadatable {
         this.provider.updateLevelName(name);
 
         this.server.getLogger().info(this.server.getLanguage().translateString("nukkit.level.preparing",
-                TextFormat.GREEN + this.provider.getName() + TextFormat.WHITE));
+                TextFormat.GREEN + this.provider.getName() + TextFormat.RESET));
 
         this.generator = Generator.getGenerator(this.provider.getGenerator());
 

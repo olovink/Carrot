@@ -74,10 +74,8 @@ public class BugReportGenerator extends Thread {
         content = content.replace("${NUKKIT_VERSION}", Nukkit.VERSION);
         content = content.replace("${GIT_COMMIT_ABBREV}", abbrev);
         content = content.replace("${JAVA_VERSION}", System.getProperty("java.vm.name") + " (" + System.getProperty("java.runtime.version") + ")");
-        content = content.replace("${HOSTOS}", systemInfo.getOperatingSystem().getFamily() + " [" + systemInfo.getOperatingSystem().getVersion().getVersion() + "]");
         content = content.replace("${MEMORY}", getCount(systemInfo.getHardware().getMemory().getTotal(), true));
         content = content.replace("${STORAGE_SIZE}", getCount(totalDiskSize, true));
-        content = content.replace("${CPU_TYPE}", systemInfo.getHardware().getProcessor().getName());
         content = content.replace("${PHYSICAL_CORE}", String.valueOf(systemInfo.getHardware().getProcessor().getPhysicalProcessorCount()));
         content = content.replace("${LOGICAL_CORE}", String.valueOf(systemInfo.getHardware().getProcessor().getLogicalProcessorCount()));
         content = content.replace("${STACKTRACE}", stringWriter.toString());
